@@ -1,3 +1,8 @@
+## 0.3.0
+
+- `GET /screenshot` answers the app's view as a PNG, in release builds
+  too; the Python client's `screenshot()` returns or saves it.
+
 ## 0.2.0
 
 - **Breaking:** listens on loopback by default; pass
