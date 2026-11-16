@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart' show OffsetLayer, RendererBinding;
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/widgets.dart' show Element;
 
 import 'actions.dart';
@@ -97,6 +100,7 @@ class FrtServer {
     '/long-press': ('POST', _handleLongPress),
     '/wait': ('POST', _handleWait),
     '/tree': ('GET', _handleTree),
+    '/screenshot': ('GET', _handleScreenshot),
     '/type': ('POST', _handleType),
     '/terminal-buffer': ('POST', _handleTerminalBuffer),
     '/terminal-input': ('POST', _handleTerminalInput),
@@ -398,6 +402,39 @@ class FrtServer {
       },
       status: result.found ? 200 : 408,
     );
+  }
+
+  /// The app's first view as a PNG, as of the next frame: the root layer
+  /// drawn again into an image, which works in release builds too. The root
+  /// layer already scales to device pixels, so `scale` 1 is full resolution.
+  Future<void> _handleScreenshot(HttpRequest request) async {
+    final raw = request.uri.queryParameters['scale'];
+    final scale = raw == null ? 1.0 : double.tryParse(raw);
+    if (scale == null || !scale.isFinite || scale <= 0 || scale > 4) {
+      throw FrtException.badRequest('"scale" must be a number above 0, at most 4');
+    }
+    await SchedulerBinding.instance.endOfFrame;
+    final views = RendererBinding.instance.renderViews;
+    // ignore: invalid_use_of_protected_member
+    final layer = views.isEmpty ? null : views.first.layer;
+    if (layer is! OffsetLayer) {
+      throw FrtException(409, 'no_view', 'The app has drawn no view yet');
+    }
+    final ui.Image image =
+        await layer.toImage(views.first.paintBounds, pixelRatio: scale);
+    try {
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (png == null) {
+        throw FrtException(500, 'internal', 'The view could not be encoded');
+      }
+      _jsonResponse(request, {
+        'png': base64Encode(png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes)),
+        'width': image.width,
+        'height': image.height,
+      });
+    } finally {
+      image.dispose();
+    }
   }
 
   void _jsonResponse(

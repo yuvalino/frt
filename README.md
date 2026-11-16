@@ -101,6 +101,7 @@ so lower `settle` when that slows a test down.
 | `POST /long-press` | `by`, `value`, `index`, `settle`, `duration` | Holds for `duration` ms (default 600, at most 60000) |
 | `POST /wait` | `by`, `value`, `index`, `timeout` | Waits up to `timeout` ms (default 5000, at most 600000) for a match; 408 if none |
 | `GET /tree?depth=` | | The widget tree (default depth 50) |
+| `GET /screenshot?scale=` | | The app's view as a PNG: `png` (base64), `width`, `height`; `scale` 1 (default) is device pixels, at most 4. Works in release builds |
 | `POST /terminal-buffer` | terminal, `screen`, `from` | The terminal's lines, below |
 | `POST /terminal-input` | terminal, `text`, `paste` | Sends `text` to the program as typed (Return is `"\r"`, Ctrl-C `"\u0003"`), or as a paste |
 | `POST /terminal-wait` | terminal, `text` or `pattern`, `timeout`, `screen`, `from` | Waits up to `timeout` ms (default 5000) until the terminal shows `text` or matches the regex `pattern`; 408 if not |
